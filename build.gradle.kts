@@ -27,6 +27,19 @@ repositories {
 extra["springAiVersion"] = "1.0.1"
 
 dependencies {
+    implementation("io.modelcontextprotocol:kotlin-sdk:0.4.0")
+
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.slf4j:slf4j-simple:2.0.9")
+    implementation("io.ktor:ktor-client-core:2.3.7")
+    implementation("io.ktor:ktor-client-cio:2.3.7")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.json:json:20231013")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
+
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
