@@ -1,15 +1,16 @@
 package voyana.mcpprototype.service
 
-import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import org.springframework.stereotype.Service
 
 import java.io.IOException
 
-class TravelRecommandationMCPServer {
+@Service
+class TravelRecommendationMCPServer {
 
     private val httpClient = OkHttpClient()
     private val googlePlacesApiKey = System.getenv("GOOGLE_PLACES_API_KEY")
@@ -163,7 +164,7 @@ class TravelRecommandationMCPServer {
 fun main() {
     println("여행 추천 MCP 서버를 시작합니다...")
 
-    TravelRecommandationMCPServer().testGoogleAPI()
+    TravelRecommendationMCPServer().testGoogleAPI()
 
-    TravelRecommandationMCPServer().startServer()
+    TravelRecommendationMCPServer().startServer()
 }
