@@ -1,8 +1,40 @@
 server:
   port: 8080
+  tomcat:
+    connection-timeout: 120000  # 2분 타임아웃
+    keep-alive-timeout: 60000   # Keep-alive 타임아웃
+    max-keep-alive-requests: 100
 
 spring:
-  datasource:
-    url:
-    username:
-    password:
+  application:
+    name: voyana-mcp-prototype
+
+# MCP 서버 설정
+mcp:
+  server:
+    url: http://localhost:8081  # MCP Server URL
+    timeout:
+      connect: 30000  # 30초
+      read: 120000    # 2분
+      write: 30000    # 30초
+
+# 로깅 설정
+logging:
+  level:
+    voyana.mcpprototype: DEBUG
+    org.springframework.web: INFO
+    okhttp3: DEBUG  # OkHttp 디버깅 추가
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# Google Places API (환경변수에서 읽음)
+google:
+  places:
+    api-key: ${GOOGLE_PLACES_API_KEY:}
+
+# Ollama 설정
+ollama:
+  base-url: http://localhost:11434
+  model: llama3.2
+  timeout: 60000  # Ollama 타임아웃 1분
+  max-tokens: 800  # 응답 토큰 제한
