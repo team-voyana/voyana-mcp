@@ -27,14 +27,14 @@ class TravelRecommendationMCPServer(
     private val googlePlacesApiKey: String,
     @Value("\${ollama.base-url:http://localhost:11434}")
     private val ollamaBaseUrl: String,
-    @Value("\${ollama.model:llama3.2}")
+    @Value("\${ollama.model}")
     private val ollamaModel: String
 ) : CommandLineRunner {
 
     private val logger = LoggerFactory.getLogger(TravelRecommendationMCPServer::class.java)
     private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+        .connectTimeout(180000, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(180000, java.util.concurrent.TimeUnit.SECONDS)
         .build()
     
     private val objectMapper = ObjectMapper().registerKotlinModule()
@@ -288,13 +288,13 @@ class TravelRecommendationMCPServer(
         placesData: String
     ): String {
         logger.info("여행 계획 생성 시작: $destination, ${duration}일")
-        
+
         // 더 간단한 프롬프트로 수정 (속도 개선)
         val prompt = """
             $destination ${duration}일 여행 계획을 JSON으로 만들어주세요.
             예산: 하루 ${dailyBudget}원
             스타일: $intensity
-            
+
             매우 간단하게 하루에 활동 2개씩만:
             {
               "destination": "$destination",
@@ -328,33 +328,26 @@ class TravelRecommendationMCPServer(
               "totalCost": ${dailyBudget * duration},
               "summary": "$destination ${duration}일 여행"
             }
-            
+
             JSON만 응답하세요. 설명 생략.
         """.trimIndent()
 
-        return try {
             // 30초 내에 응답이 오지 않으면 Fallback 사용
             val result = callOllamaAPI(prompt)
-            
+
             if (result.isNullOrBlank()) {
                 logger.warn("Ollama 응답이 비어있음, Fallback 사용")
-                return createFallbackTravelPlan(destination, duration, dailyBudget)
             }
             
             // JSON 검증
-            try {
-                JSONObject(result)
+            return try {
+                JSONObject(result?.replace("```json", "")?.replace("```", "")?.trimIndent())
                 logger.info("Ollama JSON 검증 성공")
                 result
             } catch (e: Exception) {
                 logger.warn("Ollama 응답이 올바른 JSON이 아님, Fallback 사용: ${e.message}")
-                createFallbackTravelPlan(destination, duration, dailyBudget)
-            }
-            
-        } catch (e: Exception) {
-            logger.error("Ollama 호출 오류, Fallback 사용: ${e.message}")
-            createFallbackTravelPlan(destination, duration, dailyBudget)
-        }
+                throw  e
+            } ?: ""
     }
 
     /**
@@ -370,7 +363,7 @@ class TravelRecommendationMCPServer(
                 put("options", JSONObject().apply {
                     put("temperature", 0.7)
                     put("top_p", 0.9)
-                    put("num_predict", 1000)  // 최대 토큰 수 제한
+                    put("num_predict", 100000)  // 최대 토큰 수 제한
                 })
             }
 
@@ -415,10 +408,11 @@ class TravelRecommendationMCPServer(
         }
     }
 
+
     /**
      * 대체 여행 계획 생성
      */
-    private fun createFallbackTravelPlan(destination: String, duration: Int, dailyBudget: Long): String {
+    /*private fun createFallbackTravelPlan(destination: String, duration: Int, dailyBudget: Long): String {
         val activities = mutableListOf<Map<String, Any>>()
         
         for (day in 1..duration) {
@@ -465,8 +459,7 @@ class TravelRecommendationMCPServer(
         )
 
         return objectMapper.writeValueAsString(fallbackPlan)
-    }
-
+    }*/
     /**
      * 성공 응답 생성
      */

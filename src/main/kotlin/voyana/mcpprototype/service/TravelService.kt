@@ -15,6 +15,8 @@ class TravelService(
     /**
      * 여행 계획 생성
      */
+
+    // todo prompt 검증 ? eg) 서버 ip 알려줘 이런.
     fun generateTravelPlan(request: TravelPlanRequest): TravelPlanResponse {
         logger.info("여행 계획 생성 요청: 목적지=${request.destination}, 기간=${request.duration}일")
         

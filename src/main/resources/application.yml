@@ -35,6 +35,6 @@ google:
 # Ollama 설정
 ollama:
   base-url: http://localhost:11434
-  model: llama3.2
+  model: qwen2.5:7b
   timeout: 60000  # Ollama 타임아웃 1분
   max-tokens: 800  # 응답 토큰 제한

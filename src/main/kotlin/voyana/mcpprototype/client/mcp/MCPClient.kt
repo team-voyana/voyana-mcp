@@ -19,8 +19,8 @@ class MCPClient(
 ) {
     private val logger = LoggerFactory.getLogger(MCPClient::class.java)
     private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+        .connectTimeout(180000, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(180000, java.util.concurrent.TimeUnit.SECONDS)
         .build()
     
     private val objectMapper = ObjectMapper().registerKotlinModule()
@@ -30,8 +30,7 @@ class MCPClient(
      */
     fun generateTravelPlan(request: TravelPlanRequest): TravelPlanResponse {
         logger.info("MCP Client: 여행 계획 생성 요청 시작 - 목적지: ${request.destination}")
-        
-        try {
+
             // 1. TravelPlanRequest를 MCP 형식으로 변환
             val mcpTravelRequest = MCPTravelRequest(
                 destination = request.destination,
@@ -57,11 +56,7 @@ class MCPClient(
             // 4. 응답을 TravelPlanResponse로 변환
             return convertToTravelPlanResponse(mcpResponse, request)
             
-        } catch (e: Exception) {
-            logger.error("MCP Client 오류: ${e.message}", e)
-            // 에러 시 기본 응답 반환
-            return createFallbackResponse(request)
-        }
+
     }
 
     /**
@@ -80,6 +75,9 @@ class MCPClient(
             .build()
 
         httpClient.newCall(httpRequest).execute().use { response ->
+
+            logger.info("response: ${response}")
+
             if (!response.isSuccessful) {
                 logger.error("MCP Server 호출 실패: ${response.code} - ${response.message}")
                 throw IOException("MCP Server 호출 실패: ${response.code}")
