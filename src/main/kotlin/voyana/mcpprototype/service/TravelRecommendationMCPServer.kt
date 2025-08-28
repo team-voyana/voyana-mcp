@@ -42,6 +42,9 @@ class TravelRecommendationMCPServer(
     private var serverSocket: ServerSocket? = null
 
     override fun run(vararg args: String?) {
+
+        logger.info("start MCP Server")
+
         // Spring Boot 시작 후 자동으로 MCP 서버 시작
         Thread { startMCPServer() }.start()
     }
