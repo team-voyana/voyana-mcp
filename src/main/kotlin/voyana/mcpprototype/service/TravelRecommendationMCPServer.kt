@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component
 import voyana.mcpprototype.client.mcp.*
 import voyana.mcpprototype.service.places.PlacesSearchService
 import voyana.mcpprototype.controller.dto.TravelPlanRequest
+import voyana.mcpprototype.service.places.DataLocation
 import java.io.IOException
 import java.net.ServerSocket
 import java.net.Socket
@@ -71,40 +72,6 @@ class TravelRecommendationMCPServer(
     /**
      * 실제 장소 데이터를 JSON으로 변환
      */
-    private fun buildRealPlacesJson(places: List<voyana.mcpprototype.service.places.FilteredPlace>, destination: String): String {
-        val root = JSONObject()
-        root.put("destination", destination)
-        
-        val candidatesArray = JSONArray()
-        
-        // 타입별로 그룹징하여 균형있게 배치
-        val restaurants = places.filter { it.type == "restaurant" }.take(5)
-        val attractions = places.filter { it.type == "tourist_attraction" }.take(4)
-        val cafes = places.filter { it.type == "cafe" }.take(3)
-        
-        (restaurants + attractions + cafes).forEach { place ->
-            candidatesArray.put(JSONObject().apply {
-                put("id", place.placeId)
-                put("name", place.name)
-                put("type", place.type)
-                put("rating", place.rating ?: 4.0)
-                put("userRatings", place.userRatingsTotal ?: 0)
-                put("priceLevel", place.priceLevel ?: 2)
-                put("lat", place.lat)
-                put("lng", place.lng)
-                put("address", place.address)
-                put("distance", place.distance.toInt())
-            })
-        }
-        
-        root.put("candidates", candidatesArray)
-        root.put("totalCount", candidatesArray.length())
-        
-        logger.info("실제 장소 JSON 생성: 레스토랑 ${restaurants.size}개, 관광지 ${attractions.size}개, 카페 ${cafes.size}개")
-        
-        return root.toString()
-    }
-    
     /**
      * 목적지별 좌표 반환
      */
@@ -296,38 +263,30 @@ class TravelRecommendationMCPServer(
         logger.info("여행 계획 생성: $destination, ${duration}일")
 
         // === 새로운 Places API 사용 ===
-        val placesData = try {
-            // MCP 요청을 TravelPlanRequest로 변환
-            val travelRequest = TravelPlanRequest(
-                destination = destination,
-                duration = duration,
-                dailyBudget = dailyBudget,
-                intensity = intensity,
-                centerLat = getCoordinatesForDestination(destination).first,
-                centerLng = getCoordinatesForDestination(destination).second,
-                radiusMeters = when(intensity) {
-                    "low" -> 1500
-                    "high" -> 3000
-                    else -> 2000
-                },
-                includeTypes = listOf("restaurant", "tourist_attraction", "cafe", "museum"),
-                minRating = 4.0,
-                minUserRatings = 200,
-                mealsPerDay = 3
-            )
-            
-            val places = placesSearchService.searchFilteredPlaces(travelRequest)
-            logger.info("실제 장소 데이터: ${places.size}개 발견")
-            
-            // 장소 데이터를 JSON 문자열로 변환
-            buildRealPlacesJson(places, destination)
-        } catch (e: Exception) {
-            logger.warn("Places API 실패, 샘플 데이터 사용: ${e.message}")
-            createSamplePlacesCandidatesJson(destination)
-        }
+
+        // MCP 요청을 TravelPlanRequest로 변환
+        val travelRequest = TravelPlanRequest(
+            destination = destination,
+            duration = duration,
+            dailyBudget = dailyBudget,
+            intensity = intensity,
+            centerLat = getCoordinatesForDestination(destination).first,
+            centerLng = getCoordinatesForDestination(destination).second,
+            radiusMeters = when(intensity) {
+                "low" -> 1500
+                "high" -> 3000
+                else -> 2000
+            },
+            includeTypes = listOf("restaurant", "tourist_attraction", "cafe", "museum"),
+            minRating = 4.0,
+            minUserRatings = 200,
+            mealsPerDay = 3
+        )
+
+        val places = placesSearchService.searchFilteredPlaces(travelRequest)
 
         // Ollama 호출 - 실제 장소 데이터와 함께
-        val travelPlan = generateTravelPlanWithOllamaFast(destination, duration, dailyBudget, intensity, preferences, placesData)
+        val travelPlan = generateTravelPlanWithOllamaFast(destination, duration, dailyBudget, intensity, preferences, places)
 
         return createSuccessResponse(mcpRequest.id, travelPlan)
     }
@@ -377,7 +336,7 @@ class TravelRecommendationMCPServer(
         dailyBudget: Long,
         intensity: String,
         preferences: String,
-        placesCandidatesJson: String
+        dataLocations: List<DataLocation>
     ): String {
 
         val activitiesPerDay = when (intensity.lowercase()) {
@@ -391,7 +350,7 @@ class TravelRecommendationMCPServer(
         $destination $duration 일 여행 계획을 오직 JSON 한 개로 생성하세요.
         
         입력 candidates:
-        $placesCandidatesJson
+        $dataLocations
         
         [필수 규칙]
         - 하루 5개 활동 고정: 08:00(아침), 10:00(관광), 12:00(점심), 15:00(카페), 18:00(저녁)

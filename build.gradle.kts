@@ -35,6 +35,9 @@ dependencies {
     
     // JSON 처리
     implementation("org.json:json:20231013")
+
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.module/jackson-module-kotlin
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.19.2")
     
     // Kotlin Coroutines & Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")

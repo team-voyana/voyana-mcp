@@ -1,10 +1,18 @@
 package voyana.mcpprototype.service.places
 
+import com.fasterxml.jackson.core.StreamReadFeature
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.KotlinFeature
+import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.fasterxml.jackson.module.kotlin.readValue
+import io.ktor.client.request.*
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import voyana.mcpprototype.controller.dto.TravelPlanRequest
 import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import org.json.JSONArray
 import java.util.concurrent.TimeUnit
@@ -26,7 +34,7 @@ class PlacesSearchService(
     /**
      * 메인 검색 함수 - 요구사항에 맞는 장소들을 찾아서 반환
      */
-    fun searchFilteredPlaces(request: TravelPlanRequest): List<FilteredPlace> {
+    fun searchFilteredPlaces(request: TravelPlanRequest): List<DataLocation> {
         logger.info("장소 검색 시작: ${request.destination}")
         
         val center = getSearchCenter(request)
@@ -34,29 +42,20 @@ class PlacesSearchService(
         val types = request.includeTypes ?: listOf("restaurant", "tourist_attraction", "cafe")
         
         val allPlaces = mutableListOf<FilteredPlace>()
-        
         // 각 타입별로 검색
-        types.forEach { placeType ->
-            try {
-                val places = searchByType(
-                    center = center,
-                    radius = radius,
-                    placeType = placeType,
-                    request = request
-                )
-                allPlaces.addAll(places)
-                logger.info("${placeType} 검색 결과: ${places.size}개")
-            } catch (e: Exception) {
-                logger.error("${placeType} 검색 실패: ${e.message}")
-            }
-        }
-        
-        // 필터링 및 정렬
-        val filtered = applyQualityFilters(allPlaces, request)
-        val sorted = sortPlacesByRelevance(filtered, request)
-        
-        logger.info("최종 검색 결과: ${sorted.size}개 (필터링 전: ${allPlaces.size}개)")
-        return sorted.take(50) // 최대 50개로 제한
+        val places = types.map { placeType ->
+            searchByType(
+                center = center,
+                radius = radius,
+                placeType = placeType,
+                //request = request
+            )
+        }.map {
+            it.places
+        }.flatten()
+
+//        logger.info("최종 검색 결과: ${sorted.size}개 (필터링 전: ${allPlaces.size}개)")
+        return places // 최대 50개로 제한
     }
 
     /**
@@ -94,47 +93,51 @@ class PlacesSearchService(
         center: Pair<Double, Double>,
         radius: Int,
         placeType: String,
-        request: TravelPlanRequest
-    ): List<FilteredPlace> {
-        
-        if (googlePlacesApiKey.isBlank()) {
-            logger.warn("Google Places API 키가 없음, 샘플 데이터 반환")
-            return createSamplePlaces(placeType, center)
-        }
+//        request: TravelPlanRequest
+    ): PlaceData {
 
-        val url = HttpUrl.Builder()
-            .scheme("https")
-            .host("maps.googleapis.com")
-            .addPathSegments("maps/api/place/nearbysearch/json")
-            .addQueryParameter("location", "${center.first},${center.second}")
-            .addQueryParameter("radius", radius.toString())
-            .addQueryParameter("type", placeType)
-            .addQueryParameter("key", googlePlacesApiKey)
-            .addQueryParameter("language", "ko")
-            .apply {
-                // 현재 영업중인 곳만 검색
-                if (request.openNow == true) {
-                    addQueryParameter("opennow", "true")
-                }
-            }
-            .build()
+        val request = RequestBody(
+            includedTypes = listOf("restaurant"),
+            maxResultCount = 10,
+            locationRestriction = LocationRestriction(
+                circle = Circle(
+                    center = Location(
+                        latitude = 37.5665,
+                        longitude = 126.9780
+                    ),
+                    radius = 5000.0
+                )
+            ),
+            languageCode = "ko-kr"
+        )
 
-        val requestBuilder = Request.Builder().url(url)
+        val objectMapper = ObjectMapper()
+        objectMapper.registerModule(
+            KotlinModule.Builder()
+            .withReflectionCacheSize(512)
+            .configure(KotlinFeature.NullToEmptyCollection, false)
+            .configure(KotlinFeature.NullToEmptyMap, false)
+            .configure(KotlinFeature.NullIsSameAsDefault, false)
+            .configure(KotlinFeature.SingletonSupport, false)
+            .configure(KotlinFeature.StrictNullChecks, false)
+            .build())
+        val requestBody = objectMapper.writeValueAsString(request).toRequestBody("application/json".toMediaTypeOrNull())
+
+        val requestBuilder = Request.Builder().url("https://places.googleapis.com/v1/places:searchNearby")
+            .header("X-Goog-Api-Key", "AIzaSyB0FgEOUecjEPiN9UqhFDPy9EgQVzCzLC8")
+            .header(name = "X-Goog-FieldMask", "places.displayName,places.location,places.rating,places.userRatingCount")
+            .post(requestBody)
         
         return httpClient.newCall(requestBuilder.build()).execute().use { response ->
             val body = response.body?.string()
             if (!response.isSuccessful || body.isNullOrBlank()) {
                 logger.warn("Places API 호출 실패: ${response.code}")
-                return createSamplePlaces(placeType, center)
+
+                throw RuntimeException()
+                //return createSamplePlaces(placeType, center)
             }
 
-            val json = JSONObject(body)
-            if (json.optString("status") != "OK") {
-                logger.warn("Places API 상태 오류: ${json.optString("status")}")
-                return createSamplePlaces(placeType, center)
-            }
-
-            parsePlacesResponse(json, placeType, center)
+            objectMapper.readValue<PlaceData>(body)
         }
     }
 
@@ -146,7 +149,7 @@ class PlacesSearchService(
         placeType: String, 
         searchCenter: Pair<Double, Double>
     ): List<FilteredPlace> {
-        val results = json.optJSONArray("results") ?: return emptyList()
+        val results = json.optJSONArray("places") ?: return emptyList()
         val places = mutableListOf<FilteredPlace>()
 
         for (i in 0 until minOf(results.length(), 20)) { // 타입당 최대 20개
@@ -339,4 +342,43 @@ data class FilteredPlace(
     val types: List<String>,
     val address: String,
     val photoReference: String?
+)
+
+data class LocationRestriction(
+    val circle: Circle
+)
+
+data class Circle(
+    val center: Location,
+    val radius: Double
+)
+data class Location(
+    val latitude: Double,
+    val longitude: Double
+)
+data class RequestBody(
+    val includedTypes: List<String>,
+    val maxResultCount: Int,
+    val locationRestriction: LocationRestriction,
+    val languageCode: String
+)
+
+data class PlaceData(
+    val places: List<DataLocation>
+)
+data class DataLocation(
+    val displayName: DisplayData,
+    val rating: Double,
+    val userRatingCount: Int,
+    val location: Radius,
+    var reason: String? = null,
+    var aiRating: Double? = null,
+)
+data class DisplayData(
+    val text: String,
+    val languageCode: String
+)
+data class Radius(
+    val latitude: Double,
+    val longitude: Double
 )
