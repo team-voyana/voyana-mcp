@@ -76,11 +76,12 @@ data class MCPActivity(
     val time: String,
     val name: String,
     val type: String,
-    val description: String,
-    val cost: Long,
-    val location: MCPLocation,
-    val duration: Int,
-    val rating: Double?
+    val description: String? = null,  // nullable로 변경
+    val brief: String? = null,        // brief 필드 추가 (fallback용)
+    val location: MCPLocation? = null, // nullable로 변경
+    val duration: Int? = null,        // nullable로 변경
+    val cost: Long? = null,           // nullable로 변경
+    val rating: Double? = null        // nullable로 변경
 )
 
 data class MCPLocation(
