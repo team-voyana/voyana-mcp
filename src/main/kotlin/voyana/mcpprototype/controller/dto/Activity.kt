@@ -16,5 +16,6 @@ enum class ActivityType {
     RESTAURANT,     // 식당
     SHOPPING,       // 쇼핑
     TRANSPORT,      // 이동
+    CAFE,
     BREAK          // 휴식
 }

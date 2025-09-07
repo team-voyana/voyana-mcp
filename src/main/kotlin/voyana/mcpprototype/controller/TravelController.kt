@@ -17,7 +17,7 @@ class TravelController(
     private val logger = LoggerFactory.getLogger(TravelController::class.java)
 
     @PostMapping("/plan")
-    fun createTravelPlan(@RequestBody request: TravelPlanRequest): ResponseEntity<*> {
+    suspend fun createTravelPlan(@RequestBody request: TravelPlanRequest): ResponseEntity<*> {
         return try {
             logger.info("여행 계획 요청 수신: ${request.destination}, ${request.duration}일")
             
