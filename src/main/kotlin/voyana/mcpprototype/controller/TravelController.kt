@@ -33,6 +33,18 @@ class TravelController(
             )
         }
     }
+
+    @PostMapping("google/test")
+    fun placesApiEndpoint(dto: TravelPlanRequest): ResponseEntity<Map<String, Any>> {
+
+        placesSearchService.searchFilteredPlaces(dto);
+
+        return ResponseEntity.ok(mapOf(
+            "message" to "새로운 기능이 준비되었습니다",
+            "timestamp" to System.currentTimeMillis(),
+            "supportedTypes" to listOf("restaurant", "tourist_attraction", "cafe", "museum", "park")
+        ))
+    }
     
     // === 간단한 테스트 엔드포인트 ===
     @GetMapping("/test")

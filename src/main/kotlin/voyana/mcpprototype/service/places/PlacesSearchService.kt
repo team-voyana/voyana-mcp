@@ -125,7 +125,7 @@ class PlacesSearchService(
 
         val requestBuilder = Request.Builder().url("https://places.googleapis.com/v1/places:searchNearby")
             .header("X-Goog-Api-Key", "AIzaSyB0FgEOUecjEPiN9UqhFDPy9EgQVzCzLC8")
-            .header(name = "X-Goog-FieldMask", "places.displayName,places.location,places.rating,places.userRatingCount")
+            .header(name = "X-Goog-FieldMask", "places.displayName,places.location,places.rating,places.userRatingCount,places.editorialSummary,places.shortFormattedAddress,places.types,places.regularOpeningHours")
             .post(requestBody)
         
         return httpClient.newCall(requestBuilder.build()).execute().use { response ->
@@ -303,25 +303,6 @@ class PlacesSearchService(
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
         
         return earthRadius * c
-    }
-
-    /**
-     * 샘플 데이터 생성 (API 키가 없을 때)
-     */
-    private fun createSamplePlaces(placeType: String, center: Pair<Double, Double>): List<FilteredPlace> {
-        return when (placeType) {
-            "restaurant" -> listOf(
-                FilteredPlace("sample_restaurant_1", "샘플 한식당", "restaurant", center.first + 0.001, center.second + 0.001, 4.2, 500, 2, 100.0, true, listOf("restaurant"), "서울시 중구", null),
-                FilteredPlace("sample_restaurant_2", "샘플 업스케일 레스토랑", "restaurant", center.first + 0.0015, center.second + 0.0015, 4.4, 800, 3, 150.0, true, listOf("restaurant"), "서울시 중구", null)
-            )
-            "cafe" -> listOf(
-                FilteredPlace("sample_cafe_1", "샘플 카페", "cafe", center.first + 0.002, center.second + 0.002, 4.0, 300, 1, 200.0, true, listOf("cafe"), "서울시 중구", null)
-            )
-            "tourist_attraction" -> listOf(
-                FilteredPlace("sample_attraction_1", "샘플 궁궐", "tourist_attraction", center.first + 0.003, center.second + 0.003, 4.5, 1000, 0, 300.0, true, listOf("tourist_attraction"), "서울시 종로구", null)
-            )
-            else -> emptyList()
-        }
     }
 }
 
