@@ -8,6 +8,9 @@ server:
 spring:
   application:
     name: voyana-mcp-prototype
+  mvc:
+    async:
+      request-timeout: 60000
 
 # MCP 서버 설정
 mcp:
