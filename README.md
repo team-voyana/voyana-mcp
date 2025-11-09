@@ -1,183 +1,136 @@
-# Voyana MCP Travel Recommendation Prototype
+# Voyana MCP
 
-MCP(Model Context Protocol)를 활용한 AI 기반 여행 추천 서비스 프로토타입
+AI 기반 여행 계획 추천 서비스 (MCP + Gemini + Google Places API)
 
-## 🏗️ 아키텍처
+## 🎯 주요 기능
 
+- Gemini AI를 활용한 맞춤형 여행 일정 생성
+- Google Places API 기반 실제 장소 정보 연동
+- MCP(Model Context Protocol) 통합
+- 예산, 강도, 선호도 기반 최적화
+
+## 🚀 빠른 시작
+
+### 필수 요구사항
+
+- JDK 17+
+- Gradle 8.x
+- Google Places API Key
+- Gemini API Key
+
+### 환경 설정
+
+```yaml
+# application.yml
+google:
+  places:
+    api-key: your_google_places_api_key
+    
+gemini:
+  api:
+    key: your_gemini_api_key
+    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent
 ```
-사용자 요청 → TravelController → TravelService → MCPClient → MCPServer → Ollama + Google Places API
-```
 
-## 🚀 실행 방법
+### 실행
 
-### 1. 환경 설정
-```bash
-# Google Places API 키 설정 (선택사항)
-export GOOGLE_PLACES_API_KEY=your_api_key_here
-
-# Ollama 실행 (필수)
-ollama serve
-ollama pull llama3.2
-```
-
-### 2. 애플리케이션 실행
 ```bash
 ./gradlew bootRun
 ```
 
-### 3. 서비스 확인
-- Spring Boot API: http://localhost:8080
-- MCP Server: http://localhost:8081 (자동 시작)
+서버 실행 후: http://localhost:8080
 
-## 📡 API 엔드포인트
+## 📡 API
 
 ### 여행 계획 생성
+
 ```http
-POST http://localhost:8080/api/travel/plan
+POST /api/v2/travel/plan
 Content-Type: application/json
 
 {
   "destination": "서울",
-  "duration": 3,
-  "dailyBudget": 150000,
-  "intensity": "medium",
-  "preferences": ["food", "culture", "shopping"]
+  "days": 3,
+  "budget": 500000,
+  "intensity": "MODERATE",
+  "preferences": ["CULTURE", "FOOD", "SHOPPING"]
 }
 ```
 
-### 건강 체크
-```http
-GET http://localhost:8080/api/travel/health
-```
-
-## 📝 응답 예시
+**응답 예시:**
 
 ```json
 {
-  "destination": "서울",
-  "duration": 3,
-  "totalBudget": 450000,
-  "itinerary": [
+  "days": [
     {
       "day": 1,
-      "date": null,
-      "activities": [
+      "places": [
         {
-          "time": "09:00",
-          "type": "ATTRACTION",
           "name": "경복궁",
-          "description": "조선왕조 대표 궁궐",
-          "location": {
-            "lat": 37.5796,
-            "lng": 126.9770,
-            "address": "서울 종로구"
-          },
+          "category": "CULTURE",
+          "startTime": "09:00",
           "duration": 120,
-          "cost": 50000,
-          "rating": 4.5
+          "estimatedCost": 50000,
+          "location": {
+            "latitude": 37.5796,
+            "longitude": 126.9770,
+            "address": "서울 종로구"
+          }
         }
-      ],
-      "dailyCost": 150000
+      ]
     }
   ],
-  "summary": {
-    "totalCost": 450000,
-    "totalActivities": 9,
-    "typeCount": {
-      "ATTRACTION": 3,
-      "RESTAURANT": 3,
-      "SHOPPING": 3
-    },
-    "averageRating": 4.2
-  }
+  "totalCost": 450000
 }
 ```
 
-## 🔧 프로젝트 구조
+### Google Places 테스트
 
+```http
+GET /api/test/places/nearby?location=37.5665,126.9780&radius=1000&type=restaurant
 ```
-src/main/kotlin/voyana/mcpprototype/
-├── controller/
-│   ├── TravelController.kt              # REST API 엔드포인트
-│   └── dto/                             # Request/Response DTO
-├── service/
-│   ├── TravelService.kt                 # 비즈니스 로직
-│   └── TravelRecommendationMCPServer.kt # MCP 서버 구현
-├── client/
-│   └── mcp/
-│       ├── MCPClient.kt                 # MCP 클라이언트
-│       └── MCPMessage.kt                # MCP 메시지 DTO
-└── McpPrototypeApplication.kt           # Spring Boot 메인 클래스
-```
-
-## 🔍 주요 컴포넌트
-
-### TravelController
-- REST API 엔드포인트 제공
-- 요청 검증 및 응답 처리
-- 에러 핸들링
-
-### TravelService  
-- 비즈니스 로직 처리
-- 요청 검증 및 변환
-- MCPClient 호출
-
-### MCPClient
-- MCP 프로토콜 구현
-- HTTP 통신 처리
-- 응답 변환 및 에러 처리
-- Fallback 로직
-
-### TravelRecommendationMCPServer
-- MCP 서버 구현 (포트 8081)
-- Google Places API 연동
-- Ollama LLM 연동
-- 여행 계획 생성 로직
 
 ## 🛠️ 기술 스택
 
-- **Backend**: Spring Boot 3.5.4, Kotlin 1.9.25
-- **AI/LLM**: Ollama (llama3.2)
-- **External API**: Google Places API
-- **Protocol**: MCP (Model Context Protocol)
-- **HTTP Client**: OkHttp
-- **Build Tool**: Gradle
+- **Language**: Kotlin 1.9.25
+- **Framework**: Spring Boot 3.5.4
+- **AI**: Gemini 2.5 Flash
+- **API**: Google Places API (New)
+- **HTTP**: OkHttp, WebFlux
+- **Build**: Gradle
 
-## 📋 테스트 시나리오
+## 📂 프로젝트 구조
 
-### 성공 케이스
-1. 유효한 여행 계획 요청
-2. Google Places API 연동 (API 키 있는 경우)
-3. Ollama LLM 응답 처리
-
-### Fallback 케이스
-1. Google Places API 키 없음 → 샘플 데이터 사용
-2. Ollama 응답 실패 → 기본 여행 계획 생성
-3. MCP 서버 오류 → 클라이언트 레벨 Fallback
-
-## 🐛 트러블슈팅
-
-### MCP 서버 시작 실패
-- 포트 8081이 사용 중인지 확인
-- 로그에서 구체적인 오류 메시지 확인
-
-### Ollama 연결 실패
-```bash
-# Ollama 상태 확인
-ollama list
-curl http://localhost:11434/api/version
+```
+src/main/kotlin/voyana/mcpprototype/
+├── client/mcp/          # Gemini API 클라이언트
+├── controller/v2/       # REST API
+├── service/v2/          # 비즈니스 로직
+│   ├── GooglePlacesService.kt
+│   └── TravelPlanService.kt
+└── McpPrototypeApplication.kt
 ```
 
-### Google Places API 오류
-- API 키 유효성 확인
-- API 할당량 확인
-- 빌링 계정 활성화 확인
+## 🔧 주요 클래스
 
-## 📈 향후 개선 사항
+- `TravelPlanService`: 여행 계획 생성 핵심 로직
+- `GooglePlacesService`: Google Places API 연동
+- `GeminiApiClient`: Gemini AI 통신
 
-1. **데이터베이스 연동**: 여행 계획 저장/조회
-2. **인증/인가**: 사용자 관리 시스템
-3. **캐싱**: Redis를 활용한 응답 캐싱
-4. **모니터링**: 메트릭 및 로깅 개선
-5. **UI**: React 프론트엔드 개발
-6. **배포**: Docker 컨테이너화
+## 📝 개발 노트
+
+- Gemini를 활용한 JSON 기반 여행 계획 생성
+- Google Places API (New)의 Nearby Search 사용
+- 코루틴 기반 비동기 처리
+- 위치 기반 장소 검색 및 필터링
+
+
+**환경 변수에 API 키 설정**
+
+
+```
+
+**빌드 오류**
+```bash
+./gradlew clean build
+```
